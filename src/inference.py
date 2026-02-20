@@ -8,16 +8,21 @@ from datetime import datetime
 from src.model import create_model
 
 
+
 load_dotenv()
+
 
 def safe_log(x):
     return np.log10(x + 1) if x > 0 else 0.0
 
+
 class BotDetector:
     """Real-time bot detection using Bright Data API"""
 
+
     def __init__(self, model_path="models/bot_detector_mlp.pt"):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 
         print("Loading trained model...")
         self.model = create_model(input_dim=23).to(self.device)
@@ -25,25 +30,31 @@ class BotDetector:
         self.model.eval()
         print(f"✓ Model loaded from {model_path}")
 
+
         scaler = torch.load('data/scaler.pt')
         self.feature_mean = scaler['feature_mean']
         self.feature_std = scaler['feature_std']
         print("✓ Feature normalization parameters loaded.")
 
+
         self.bright_data_api_token = os.getenv('BRIGHT_DATA_API_TOKEN', '')
         self.dataset_id = os.getenv('BRIGHT_DATA_DATASET_ID', '')
+
 
         if not self.bright_data_api_token or not self.dataset_id:
             print("⚠ Warning: BRIGHT_DATA credentials not found in .env file")
             print("  Add: BRIGHT_DATA_API_TOKEN and BRIGHT_DATA_DATASET_ID")
 
+
     def extract_features_from_brightdata(self, username):
         """Extract Twitter user features using Bright Data Web Scraper API"""
         print(f"\nExtracting features for user: @{username}")
 
+
         if not self.bright_data_api_token or not self.dataset_id:
             print("⚠ Using dummy features (add credentials to .env for real data)")
             return self._create_dummy_features()
+
 
         try:
             url = "https://api.brightdata.com/datasets/v3/scrape"
@@ -64,7 +75,9 @@ class BotDetector:
             print("📡 Calling Bright Data API...")
             response = requests.post(url, headers=headers, params=params, json=payload, timeout=90)
 
+
             print(f"Status Code: {response.status_code}")
+
 
             if response.status_code == 200:
                 result = response.json()
@@ -85,10 +98,12 @@ class BotDetector:
                     print(f"Unexpected response type: {type(result)}")
                     return self._create_dummy_features()
 
+
                 print(f"✓ Got live data for: @{profile_data.get('id', 'unknown')}")
                 features = self._map_brightdata_to_features(profile_data)
                 print("✓ Features extracted successfully from Bright Data!")
                 return features
+
 
             else:
                 print(f"✗ API error: {response.status_code}")
@@ -99,9 +114,11 @@ class BotDetector:
                     print("\n💡 Validation error. Check API parameters")
                 return self._create_dummy_features()
 
+
         except Exception as e:
             print(f"✗ Error: {e}")
             return self._create_dummy_features()
+
 
     def _map_brightdata_to_features(self, data):
         """Map Bright Data response to 23-feature tensor using log-scaling for numeric features and scaled account age"""
@@ -110,10 +127,12 @@ class BotDetector:
         posts_val = data.get('posts_count', 0) or 0
         subscriptions_val = data.get('subscriptions', 0) or 0
 
+
         followers = safe_log(followers_val)
         following = safe_log(following_val)
         posts_count = safe_log(posts_val)
         is_verified = 1 if data.get('is_verified', False) else 0
+
 
         # Account age: do NOT log-transform, but scale by 10000 to match training expectations
         date_joined = data.get('date_joined', '')
@@ -127,16 +146,19 @@ class BotDetector:
             account_age = 365
         account_age_scaled = account_age / 10000.0   # <---- scaling
 
+
         subscriptions = safe_log(subscriptions_val)
         biography = data.get('biography') or ''
         profile_name = data.get('profile_name') or ''
         location = data.get('location') or ''
         external_link = data.get('external_link') or ''
 
+
         description_length = safe_log(len(biography))
         screen_name_length = safe_log(len(profile_name))
         has_url = 1 if external_link else 0
         geo_enabled = 1 if location else 0
+
 
         features_raw = [
             followers, following, posts_count, float(is_verified), float(account_age_scaled),
@@ -144,14 +166,17 @@ class BotDetector:
             float(has_url), float(geo_enabled), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
         ]
 
+
         # Derived metrics: ratios, log-transformed
         follower_ratio = safe_log(followers_val / (following_val + 1e-6))
         following_ratio = safe_log(following_val / (followers_val + 1e-6))
         ratio_score = min(abs(np.log10((followers_val / (following_val + 1e-6)) + 1e-6)), 3.0)
 
+
         features_derived = [follower_ratio, following_ratio, ratio_score]
         all_features = features_raw + features_derived
         return torch.tensor(all_features, dtype=torch.float32)
+
 
     def _create_dummy_features(self):
         """Dummy features for local testing, using log-scaling and scaled account age"""
@@ -163,15 +188,18 @@ class BotDetector:
         account_age = 45.0
         account_age_scaled = account_age / 10000.0 # <---- scaling
 
+
         description_length = safe_log(20)
         screen_name_length = safe_log(8)
         has_url = 1.0
         geo_enabled = 0.0
 
+
         followers = safe_log(followers_val)
         following = safe_log(following_val)
         posts_count = safe_log(posts_val)
         subscriptions = safe_log(subscriptions_val)
+
 
         features_raw = [
             followers, following, posts_count, is_verified, account_age_scaled,
@@ -183,9 +211,11 @@ class BotDetector:
         following_ratio = safe_log(following_val / (followers_val + 1e-6))
         ratio_score = min(abs(np.log10(followers_val / (following_val + 1e-6) + 1e-6)), 3.0)
 
+
         features_derived = [follower_ratio, following_ratio, ratio_score]
         all_features = features_raw + features_derived
         return torch.tensor(all_features, dtype=torch.float32)
+
 
     def predict(self, username):
         """Predict if user is bot or human"""
@@ -201,9 +231,9 @@ class BotDetector:
 
         with torch.no_grad():
             logits = self.model(features)
-            probabilities = torch.softmax(logits, dim=1)
-            print(f"\nRaw logits: {logits.tolist()}")
-            print(f"After softmax: {probabilities.tolist()}")
+            tpr = 100.0  #Change from 3.0 to 10.0
+            probabilities = torch.softmax(logits / tpr, dim=1)
+            print(f"🔥 After softmax: {probabilities.tolist()}")
             print(f"Argmax result: {torch.argmax(probabilities, dim=1).item()}")
             print("="*50 + "\n")
 
@@ -229,12 +259,16 @@ if __name__ == "__main__":
     print("TWITTER BOT DETECTOR")
     print("="*50)
 
+
     detector = BotDetector()
+
 
     print("\n🧪 Testing bot detector...")
     test_username = input("Enter Twitter username (without @): ").strip() or "elonmusk"
 
+
     detector.predict(test_username)
+
 
     print("\n" + "="*50)
     print("✅ Bot detector ready!")
