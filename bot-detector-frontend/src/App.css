@@ -410,3 +410,75 @@
   color: #556677;
   margin: 0.25rem 0 1rem;
 }
+
+/* ===== Feature Importance ===== */
+.feature-importance {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #2a3a4a;
+  text-align: left;
+}
+
+.feature-importance h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+  color: #61dafb;
+}
+
+.feature-explanation {
+  font-size: 0.9rem;
+  color: #8899a6;
+  margin-bottom: 1rem;
+}
+
+.feature-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.feature-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.feature-name {
+  width: 140px;
+  font-size: 0.85rem;
+  color: #e8eaed;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feature-bar-container {
+  flex: 1;
+  height: 12px;
+  background: #0f1923;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.feature-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.5s ease-out;
+}
+
+.feature-positive {
+  background: #f91880; /* Bot color */
+}
+
+.feature-negative {
+  background: #00ba7c; /* Human color */
+}
+
+.feature-value {
+  width: 50px;
+  font-size: 0.8rem;
+  color: #8899a6;
+  text-align: left;
+}
+

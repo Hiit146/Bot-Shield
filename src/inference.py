@@ -2,10 +2,19 @@ import torch
 import requests
 import os
 import numpy as np
+import shap
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime
 from src.model import create_model
+
+FEATURE_NAMES = [
+    "Followers", "Following", "Posts Count", "Is Verified", "Account Age",
+    "Subscriptions", "Description Length", "Screen Name Length",
+    "Has URL", "Geo Enabled", "F11", "F12", "F13", "F14", "F15",
+    "F16", "F17", "F18", "F19", "F20",
+    "Follower Ratio", "Following Ratio", "Ratio Score"
+]
 
 
 
@@ -36,6 +45,9 @@ class BotDetector:
         self.feature_std = scaler['feature_std']
         print("✓ Feature normalization parameters loaded.")
 
+        # Initialize SHAP explainer
+        background = torch.zeros(100, 23).to(self.device)
+        self.explainer = shap.DeepExplainer(self.model, background)
 
         self.bright_data_api_token = os.getenv('BRIGHT_DATA_API_TOKEN', '')
         self.dataset_id = os.getenv('BRIGHT_DATA_DATASET_ID', '')
@@ -242,6 +254,30 @@ class BotDetector:
             human_prob = probabilities[0][0].item()
             bot_prob = probabilities[0][1].item()
 
+        # Calculate SHAP values
+        try:
+            shap_values = self.explainer.shap_values(features)
+            # shap_values is (1, 23, 2)
+            # We want the importance for the predicted class
+            class_shap = shap_values[0, :, prediction]
+            
+            # Create a list of (feature_name, importance_value)
+            feature_importance = []
+            for i, name in enumerate(FEATURE_NAMES):
+                if not name.startswith("F1") and not name.startswith("F20"): # Filter out dummy features
+                    feature_importance.append({
+                        "feature": name,
+                        "importance": float(class_shap[i])
+                    })
+            
+            # Sort by absolute importance
+            feature_importance.sort(key=lambda x: abs(x["importance"]), reverse=True)
+            # Keep top 5
+            top_features = feature_importance[:5]
+        except Exception as e:
+            print(f"Error calculating SHAP values: {e}")
+            top_features = []
+
         result = "🤖 BOT" if prediction == 1 else "👤 HUMAN"
 
         print(f"\n{'='*50}")
@@ -250,9 +286,12 @@ class BotDetector:
         print(f"\nProbabilities:")
         print(f"  Human: {human_prob*100:.2f}%")
         print(f"  Bot:   {bot_prob*100:.2f}%")
+        print(f"\nTop Contributing Features:")
+        for f in top_features:
+            print(f"  {f['feature']}: {f['importance']:.4f}")
         print(f"{'='*50}")
 
-        return prediction, confidence, (human_prob, bot_prob)
+        return prediction, confidence, (human_prob, bot_prob), top_features
 
 if __name__ == "__main__":
     print("="*50)

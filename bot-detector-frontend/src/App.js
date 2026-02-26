@@ -156,6 +156,44 @@ function App() {
                     ></div>
                   </div>
                 </div>
+
+                {result.top_features && result.top_features.length > 0 && (
+                  <div className="feature-importance">
+                    <h3>Why this prediction?</h3>
+                    <p className="feature-explanation">
+                      Top features contributing to the <strong>{result.prediction}</strong> classification:
+                    </p>
+                    <div className="feature-bars">
+                      {result.top_features.map((f, idx) => {
+                        const maxImp = Math.max(...result.top_features.map(x => Math.abs(x.importance)));
+                        const width = maxImp > 0 ? `${(Math.abs(f.importance) / maxImp) * 100}%` : '0%';
+                        
+                        // Determine color based on prediction and importance direction
+                        let isBotContribution = false;
+                        if (result.prediction === 'BOT') {
+                          isBotContribution = f.importance > 0;
+                        } else {
+                          isBotContribution = f.importance < 0;
+                        }
+
+                        return (
+                          <div key={idx} className="feature-bar-row">
+                            <div className="feature-name" title={f.feature}>{f.feature}</div>
+                            <div className="feature-bar-container">
+                              <div 
+                                className={`feature-bar-fill ${isBotContribution ? 'feature-positive' : 'feature-negative'}`}
+                                style={{ width }}
+                              ></div>
+                            </div>
+                            <div className="feature-value">
+                              {f.importance > 0 ? '+' : ''}{f.importance.toFixed(2)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

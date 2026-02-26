@@ -27,13 +27,14 @@ class BatchPredictRequest(BaseModel):
 
 @app.post("/predict")
 def predict(req: PredictRequest):
-    prediction, confidence, (human_prob, bot_prob) = detector.predict(req.username)
+    prediction, confidence, (human_prob, bot_prob), top_features = detector.predict(req.username)
     return {
         "username": req.username,
         "prediction": "BOT" if prediction == 1 else "HUMAN",
         "confidence": confidence,
         "bot_probability": bot_prob,
-        "human_probability": human_prob
+        "human_probability": human_prob,
+        "top_features": top_features
     }
 
 @app.post("/predict/batch")
@@ -44,13 +45,14 @@ def predict_batch(req: BatchPredictRequest):
         if not username:
             continue
         try:
-            prediction, confidence, (human_prob, bot_prob) = detector.predict(username)
+            prediction, confidence, (human_prob, bot_prob), top_features = detector.predict(username)
             results.append({
                 "username": username,
                 "prediction": "BOT" if prediction == 1 else "HUMAN",
                 "confidence": confidence,
                 "bot_probability": bot_prob,
                 "human_probability": human_prob,
+                "top_features": top_features,
                 "error": None
             })
         except Exception as e:
@@ -60,6 +62,7 @@ def predict_batch(req: BatchPredictRequest):
                 "confidence": None,
                 "bot_probability": None,
                 "human_probability": None,
+                "top_features": None,
                 "error": str(e)
             })
     return {"results": results}
@@ -80,13 +83,14 @@ async def predict_csv(file: UploadFile = File(...)):
         if not username:
             continue
         try:
-            prediction, confidence, (human_prob, bot_prob) = detector.predict(username)
+            prediction, confidence, (human_prob, bot_prob), top_features = detector.predict(username)
             results.append({
                 "username": username,
                 "prediction": "BOT" if prediction == 1 else "HUMAN",
                 "confidence": confidence,
                 "bot_probability": bot_prob,
                 "human_probability": human_prob,
+                "top_features": top_features,
                 "error": None
             })
         except Exception as e:
@@ -96,6 +100,7 @@ async def predict_csv(file: UploadFile = File(...)):
                 "confidence": None,
                 "bot_probability": None,
                 "human_probability": None,
+                "top_features": None,
                 "error": str(e)
             })
     return {"results": results}
