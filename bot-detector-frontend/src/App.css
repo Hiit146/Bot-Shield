@@ -482,3 +482,86 @@
   text-align: left;
 }
 
+
+/* ===== Profile Card ===== */
+.profile-card {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #22303c;
+  border-radius: 10px;
+  border: 1px solid #2a3a4a;
+  text-align: left;
+}
+
+.profile-card h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.2rem;
+  color: #61dafb;
+}
+
+.profile-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #2a3a4a;
+}
+
+.profile-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #8899a6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #e8eaed;
+  margin-top: 0.2rem;
+}
+
+.profile-details p {
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+  color: #e8eaed;
+}
+
+.profile-details strong {
+  color: #8899a6;
+  margin-right: 0.5rem;
+}
+
+.profile-bio {
+  font-style: italic;
+  color: #aab8c2 !important;
+  line-height: 1.4;
+}
+
+
+/* ===== Radar Chart ===== */
+.radar-chart-container {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #2a3a4a;
+  text-align: left;
+}
+
+.radar-chart-container h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+  color: #61dafb;
+}
+
+.radar-wrapper {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+

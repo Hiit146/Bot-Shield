@@ -1,5 +1,24 @@
 import React, { useState } from 'react';
+import {
+  Chart as ChartJS,
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Radar } from 'react-chartjs-2';
 import './App.css';
+
+ChartJS.register(
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend
+);
 
 function App() {
   const [mode, setMode] = useState('single'); // 'single' or 'batch'
@@ -157,6 +176,35 @@ function App() {
                   </div>
                 </div>
 
+                {result.profile_data && (
+                  <div className="profile-card">
+                    <h3>Profile Details</h3>
+                    <div className="profile-stats">
+                      <div className="profile-stat">
+                        <span className="stat-label">Followers</span>
+                        <span className="stat-value">{result.profile_data.followers?.toLocaleString() || 0}</span>
+                      </div>
+                      <div className="profile-stat">
+                        <span className="stat-label">Following</span>
+                        <span className="stat-value">{result.profile_data.following?.toLocaleString() || 0}</span>
+                      </div>
+                      <div className="profile-stat">
+                        <span className="stat-label">Posts</span>
+                        <span className="stat-value">{result.profile_data.posts_count?.toLocaleString() || 0}</span>
+                      </div>
+                    </div>
+                    <div className="profile-details">
+                      <p><strong>Verified:</strong> {result.profile_data.is_verified ? '✅ Yes' : '❌ No'}</p>
+                      {result.profile_data.date_joined && (
+                        <p><strong>Joined:</strong> {new Date(result.profile_data.date_joined).toLocaleDateString()}</p>
+                      )}
+                      {result.profile_data.biography && (
+                        <p className="profile-bio"><strong>Bio:</strong> {result.profile_data.biography}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {result.top_features && result.top_features.length > 0 && (
                   <div className="feature-importance">
                     <h3>Why this prediction?</h3>
@@ -191,6 +239,65 @@ function App() {
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+                )}
+
+                {result.radar_data && (
+                  <div className="radar-chart-container">
+                    <h3>Bot Score Breakdown</h3>
+                    <p className="feature-explanation">
+                      Comparing this profile's normalized features against average bot and human profiles.
+                    </p>
+                    <div className="radar-wrapper">
+                      <Radar
+                        data={{
+                          labels: result.radar_data.labels,
+                          datasets: [
+                            {
+                              label: 'This Profile',
+                              data: result.radar_data.user,
+                              backgroundColor: 'rgba(97, 218, 251, 0.2)',
+                              borderColor: 'rgba(97, 218, 251, 1)',
+                              borderWidth: 2,
+                              pointBackgroundColor: 'rgba(97, 218, 251, 1)',
+                            },
+                            {
+                              label: 'Avg Bot',
+                              data: result.radar_data.avg_bot,
+                              backgroundColor: 'rgba(249, 24, 128, 0.1)',
+                              borderColor: 'rgba(249, 24, 128, 0.5)',
+                              borderWidth: 1,
+                              borderDash: [5, 5],
+                              pointBackgroundColor: 'rgba(249, 24, 128, 0.5)',
+                            },
+                            {
+                              label: 'Avg Human',
+                              data: result.radar_data.avg_human,
+                              backgroundColor: 'rgba(0, 186, 124, 0.1)',
+                              borderColor: 'rgba(0, 186, 124, 0.5)',
+                              borderWidth: 1,
+                              borderDash: [5, 5],
+                              pointBackgroundColor: 'rgba(0, 186, 124, 0.5)',
+                            },
+                          ],
+                        }}
+                        options={{
+                          scales: {
+                            r: {
+                              angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                              grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                              pointLabels: { color: '#8899a6', font: { size: 11 } },
+                              ticks: { display: false },
+                            },
+                          },
+                          plugins: {
+                            legend: {
+                              labels: { color: '#e8eaed' },
+                            },
+                          },
+                        }}
+                      />
                     </div>
                   </div>
                 )}

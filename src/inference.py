@@ -114,7 +114,7 @@ class BotDetector:
                 print(f"✓ Got live data for: @{profile_data.get('id', 'unknown')}")
                 features = self._map_brightdata_to_features(profile_data)
                 print("✓ Features extracted successfully from Bright Data!")
-                return features
+                return features, profile_data
 
 
             else:
@@ -226,12 +226,22 @@ class BotDetector:
 
         features_derived = [follower_ratio, following_ratio, ratio_score]
         all_features = features_raw + features_derived
-        return torch.tensor(all_features, dtype=torch.float32)
+        
+        dummy_profile = {
+            "followers": followers_val,
+            "following": following_val,
+            "posts_count": posts_val,
+            "is_verified": False,
+            "biography": "This is a dummy bio for local testing.",
+            "date_joined": "2023-01-01T00:00:00Z"
+        }
+        
+        return torch.tensor(all_features, dtype=torch.float32), dummy_profile
 
 
     def predict(self, username):
         """Predict if user is bot or human"""
-        features = self.extract_features_from_brightdata(username)
+        features, profile_data = self.extract_features_from_brightdata(username)
         print("\nExtracted features:", features.tolist())
 
         # Normalize features with training mean/std
@@ -291,7 +301,17 @@ class BotDetector:
             print(f"  {f['feature']}: {f['importance']:.4f}")
         print(f"{'='*50}")
 
-        return prediction, confidence, (human_prob, bot_prob), top_features
+        # Prepare radar chart data (normalized features)
+        user_features = features[0].tolist()
+        radar_data = {
+            "labels": ["Followers", "Following", "Posts Count", "Account Age", "Follower Ratio", "Following Ratio"],
+            "user": [user_features[0], user_features[1], user_features[2], user_features[4], user_features[20], user_features[21]],
+            # Mock average normalized profiles for comparison
+            "avg_bot": [-0.5, 1.2, 0.8, -1.0, -1.2, 1.5],
+            "avg_human": [0.8, -0.2, -0.1, 0.5, 0.8, -0.5]
+        }
+
+        return prediction, confidence, (human_prob, bot_prob), top_features, profile_data, radar_data
 
 if __name__ == "__main__":
     print("="*50)
