@@ -2,30 +2,39 @@ import React, { useState } from 'react';
 import './App.css';
 
 function App() {
+  const [mode, setMode] = useState('single'); // 'single' or 'batch'
+
+  // Single mode state
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
+  // Batch mode state
+  const [batchInput, setBatchInput] = useState('');
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchResults, setBatchResults] = useState([]);
+  const [batchError, setBatchError] = useState(null);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username.trim()) return;
-    
+
     setLoading(true);
     setResult(null);
     setError(null);
-    
+
     try {
       const response = await fetch('http://127.0.0.1:8000/predict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`API error: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       setResult(data);
     } catch (err) {
@@ -35,92 +44,249 @@ function App() {
     }
   };
 
+  const handleBatchSubmit = async (e) => {
+    e.preventDefault();
+    const usernames = batchInput
+      .split(/[,\n]+/)
+      .map((u) => u.trim().replace(/^@/, ''))
+      .filter(Boolean);
+
+    if (usernames.length === 0) return;
+
+    setBatchLoading(true);
+    setBatchResults([]);
+    setBatchError(null);
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/predict/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usernames }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setBatchResults(data.results);
+    } catch (err) {
+      setBatchError(err.message || 'Unexpected error');
+    } finally {
+      setBatchLoading(false);
+    }
+  };
+
+  const botCount = batchResults.filter((r) => r.prediction === 'BOT').length;
+  const humanCount = batchResults.filter((r) => r.prediction === 'HUMAN').length;
+  const errorCount = batchResults.filter((r) => r.error).length;
+
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>🤖 Twitter Bot Detector</h1>
-        <p>Check if a Twitter account is a bot or human</p>
-        
-        <form onSubmit={handleSubmit} style={{ marginTop: '2rem', width: '100%', maxWidth: '400px' }}>
-          <input
-            type="text"
-            placeholder="Enter Twitter username (without @)"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              fontSize: '1rem',
-              borderRadius: '8px',
-              border: '2px solid #61dafb',
-              marginBottom: '1rem'
-            }}
-          />
-          <button 
-            type="submit" 
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              fontSize: '1rem',
-              backgroundColor: '#61dafb',
-              color: '#282c34',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold'
-            }}
+      <div className="app-container">
+        <h1 className="app-title">🤖 Twitter Bot Detector</h1>
+        <p className="app-subtitle">Check if Twitter accounts are bots or humans</p>
+
+        {/* Mode Tabs */}
+        <div className="tabs">
+          <button
+            className={`tab ${mode === 'single' ? 'tab-active' : ''}`}
+            onClick={() => setMode('single')}
           >
-            {loading ? '🔍 Analyzing...' : '🔍 Check Account'}
+            🔍 Single Check
           </button>
-        </form>
+          <button
+            className={`tab ${mode === 'batch' ? 'tab-active' : ''}`}
+            onClick={() => setMode('batch')}
+          >
+            📊 Batch Analysis
+          </button>
+        </div>
 
-        {error && (
-          <div style={{
-            marginTop: '2rem',
-            padding: '1rem',
-            backgroundColor: '#ff4444',
-            borderRadius: '8px',
-            color: 'white'
-          }}>
-            <strong>Error:</strong> {error}
+        {/* Single Mode */}
+        {mode === 'single' && (
+          <div className="panel">
+            <form onSubmit={handleSubmit}>
+              <input
+                type="text"
+                placeholder="Enter Twitter username (without @)"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="input-field"
+              />
+              <button type="submit" disabled={loading} className="btn btn-primary">
+                {loading ? '🔍 Analyzing...' : '🔍 Check Account'}
+              </button>
+            </form>
+
+            {error && (
+              <div className="error-box">
+                <strong>Error:</strong> {error}
+              </div>
+            )}
+
+            {result && (
+              <div className="result-card">
+                <h2 className="result-username">@{result.username}</h2>
+                <div className={`result-badge ${result.prediction === 'BOT' ? 'badge-bot' : 'badge-human'}`}>
+                  {result.prediction === 'BOT' ? '🤖 BOT' : '👤 HUMAN'}
+                </div>
+                <p className="result-confidence">
+                  <strong>Confidence:</strong> {(result.confidence * 100).toFixed(1)}%
+                </p>
+                <div className="prob-bar-container">
+                  <div className="prob-label">
+                    <span>👤 Human</span>
+                    <span>{(result.human_probability * 100).toFixed(1)}%</span>
+                  </div>
+                  <div className="prob-bar">
+                    <div
+                      className="prob-fill prob-human"
+                      style={{ width: `${result.human_probability * 100}%` }}
+                    ></div>
+                  </div>
+                  <div className="prob-label">
+                    <span>🤖 Bot</span>
+                    <span>{(result.bot_probability * 100).toFixed(1)}%</span>
+                  </div>
+                  <div className="prob-bar">
+                    <div
+                      className="prob-fill prob-bot"
+                      style={{ width: `${result.bot_probability * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {result && (
-          <div style={{
-            marginTop: '2rem',
-            padding: '1.5rem',
-            backgroundColor: 'white',
-            color: '#282c34',
-            borderRadius: '12px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            maxWidth: '400px',
-            width: '100%'
-          }}>
-            <h2 style={{ margin: '0 0 1rem 0' }}>
-              @{result.username}
-            </h2>
-            <div style={{ 
-              fontSize: '3rem', 
-              margin: '1rem 0',
-              fontWeight: 'bold'
-            }}>
-              {result.prediction === 'BOT' ? '🤖 BOT' : '👤 HUMAN'}
-            </div>
-            <p style={{ fontSize: '1.2rem', margin: '0.5rem 0' }}>
-              <strong>Confidence:</strong> {(result.confidence * 100).toFixed(1)}%
-            </p>
-            <hr style={{ margin: '1rem 0', border: '1px solid #ddd' }} />
-            <p style={{ margin: '0.5rem 0' }}>
-              <strong>Bot Probability:</strong> {(result.bot_probability * 100).toFixed(1)}%
-            </p>
-            <p style={{ margin: '0.5rem 0' }}>
-              <strong>Human Probability:</strong> {(result.human_probability * 100).toFixed(1)}%
-            </p>
+        {/* Batch Mode */}
+        {mode === 'batch' && (
+          <div className="panel">
+            <form onSubmit={handleBatchSubmit}>
+              <textarea
+                placeholder={"Enter usernames separated by commas or new lines:\nelonmusk, BillGates\nBarackObama"}
+                value={batchInput}
+                onChange={(e) => setBatchInput(e.target.value)}
+                className="textarea-field"
+                rows={4}
+              />
+
+              <div className="upload-divider">
+                <span className="divider-line"></span>
+                <span className="divider-text">OR</span>
+                <span className="divider-line"></span>
+              </div>
+
+              <label className="csv-upload-label">
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="csv-file-input"
+                  onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    setBatchLoading(true);
+                    setBatchResults([]);
+                    setBatchError(null);
+                    try {
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      const response = await fetch('http://127.0.0.1:8000/predict/csv', {
+                        method: 'POST',
+                        body: formData,
+                      });
+                      if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+                      const data = await response.json();
+                      setBatchResults(data.results);
+                    } catch (err) {
+                      setBatchError(err.message || 'Unexpected error');
+                    } finally {
+                      setBatchLoading(false);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                📁 Upload CSV File
+              </label>
+              <p className="csv-hint">CSV should contain usernames (one per row or comma-separated)</p>
+
+              <button type="submit" disabled={batchLoading} className="btn btn-primary">
+                {batchLoading ? '📊 Analyzing...' : '📊 Analyze All'}
+              </button>
+            </form>
+
+            {batchError && (
+              <div className="error-box">
+                <strong>Error:</strong> {batchError}
+              </div>
+            )}
+
+            {batchResults.length > 0 && (
+              <>
+                {/* Summary Cards */}
+                <div className="summary-row">
+                  <div className="summary-card summary-total">
+                    <div className="summary-number">{batchResults.length}</div>
+                    <div className="summary-label">Total Checked</div>
+                  </div>
+                  <div className="summary-card summary-human">
+                    <div className="summary-number">{humanCount}</div>
+                    <div className="summary-label">👤 Humans</div>
+                  </div>
+                  <div className="summary-card summary-bot">
+                    <div className="summary-number">{botCount}</div>
+                    <div className="summary-label">🤖 Bots</div>
+                  </div>
+                  {errorCount > 0 && (
+                    <div className="summary-card summary-error">
+                      <div className="summary-number">{errorCount}</div>
+                      <div className="summary-label">⚠ Errors</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Results Table */}
+                <div className="table-wrapper">
+                  <table className="results-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Username</th>
+                        <th>Prediction</th>
+                        <th>Confidence</th>
+                        <th>Bot %</th>
+                        <th>Human %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {batchResults.map((r, i) => (
+                        <tr key={i} className={r.error ? 'row-error' : r.prediction === 'BOT' ? 'row-bot' : 'row-human'}>
+                          <td>{i + 1}</td>
+                          <td className="cell-username">@{r.username}</td>
+                          <td>
+                            {r.error ? (
+                              <span className="badge-error">⚠ Error</span>
+                            ) : (
+                              <span className={`badge-inline ${r.prediction === 'BOT' ? 'badge-inline-bot' : 'badge-inline-human'}`}>
+                                {r.prediction === 'BOT' ? '🤖 BOT' : '👤 HUMAN'}
+                              </span>
+                            )}
+                          </td>
+                          <td>{r.confidence ? `${(r.confidence * 100).toFixed(1)}%` : '—'}</td>
+                          <td>{r.bot_probability ? `${(r.bot_probability * 100).toFixed(1)}%` : '—'}</td>
+                          <td>{r.human_probability ? `${(r.human_probability * 100).toFixed(1)}%` : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         )}
-      </header>
+      </div>
     </div>
   );
 }

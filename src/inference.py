@@ -70,7 +70,7 @@ class BotDetector:
                 "discover_by": "user_name"
             }
             payload = {
-                "user_name": username
+                "input": [{"user_name": username}]
             }
             print("📡 Calling Bright Data API...")
             response = requests.post(url, headers=headers, params=params, json=payload, timeout=90)
