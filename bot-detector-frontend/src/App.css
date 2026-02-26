@@ -1,9 +1,7 @@
 /* ===== Base ===== */
 .App {
   text-align: center;
-  background-color: #0f1923;
   min-height: 100vh;
-  color: #e8eaed;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
