@@ -565,3 +565,44 @@
   padding: 1rem;
 }
 
+
+/* ===== Export Actions ===== */
+.export-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid #61dafb;
+  color: #61dafb;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: rgba(97, 218, 251, 0.1);
+}
+
+.report-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #2a3a4a;
+}
+
+.report-header h2 {
+  color: #61dafb;
+  margin: 0 0 0.5rem 0;
+}
+
+.report-header p {
+  color: #8899a6;
+  font-size: 0.9rem;
+  margin: 0;
+}
+

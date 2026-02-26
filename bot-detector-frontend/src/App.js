@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Chart as ChartJS,
   RadialLinearScale,
@@ -9,6 +9,8 @@ import {
   Legend,
 } from 'chart.js';
 import { Radar } from 'react-chartjs-2';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import './App.css';
 
 ChartJS.register(
@@ -22,6 +24,7 @@ ChartJS.register(
 
 function App() {
   const [mode, setMode] = useState('single'); // 'single' or 'batch'
+  const reportRef = useRef(null);
 
   // Single mode state
   const [username, setUsername] = useState('');
@@ -100,6 +103,42 @@ function App() {
   const humanCount = batchResults.filter((r) => r.prediction === 'HUMAN').length;
   const errorCount = batchResults.filter((r) => r.error).length;
 
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+    
+    try {
+      const reportElement = reportRef.current;
+      
+      // Temporarily show the header for the PDF
+      const header = reportElement.querySelector('.report-header');
+      if (header) header.style.display = 'block';
+      
+      const canvas = await html2canvas(reportElement, {
+        scale: 2,
+        backgroundColor: '#192734',
+        windowWidth: reportElement.scrollWidth,
+        windowHeight: reportElement.scrollHeight
+      });
+      
+      // Hide the header again
+      if (header) header.style.display = 'none';
+
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width / 2, canvas.height / 2]
+      });
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+      pdf.save(`Bot_Report_${result.username}_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error("Failed to export PDF", err);
+      alert("Failed to export PDF. Please try again.");
+    }
+  };
+
   return (
     <div className="App">
       <div className="app-container">
@@ -145,15 +184,25 @@ function App() {
             )}
 
             {result && (
-              <div className="result-card">
-                <h2 className="result-username">@{result.username}</h2>
-                <div className={`result-badge ${result.prediction === 'BOT' ? 'badge-bot' : 'badge-human'}`}>
-                  {result.prediction === 'BOT' ? '🤖 BOT' : '👤 HUMAN'}
+              <div className="result-container">
+                <div className="export-actions">
+                  <button onClick={handleExportPDF} className="btn btn-secondary">
+                    📄 Export PDF Report
+                  </button>
                 </div>
-                <p className="result-confidence">
-                  <strong>Confidence:</strong> {(result.confidence * 100).toFixed(1)}%
-                </p>
-                <div className="prob-bar-container">
+                <div className="result-card" ref={reportRef}>
+                  <div className="report-header" style={{ display: 'none' }}>
+                    <h2>Bot Detection Report</h2>
+                    <p>Generated on: {new Date().toLocaleString()}</p>
+                  </div>
+                  <h2 className="result-username">@{result.username}</h2>
+                  <div className={`result-badge ${result.prediction === 'BOT' ? 'badge-bot' : 'badge-human'}`}>
+                    {result.prediction === 'BOT' ? '🤖 BOT' : '👤 HUMAN'}
+                  </div>
+                  <p className="result-confidence">
+                    <strong>Confidence:</strong> {(result.confidence * 100).toFixed(1)}%
+                  </p>
+                  <div className="prob-bar-container">
                   <div className="prob-label">
                     <span>👤 Human</span>
                     <span>{(result.human_probability * 100).toFixed(1)}%</span>
@@ -301,6 +350,7 @@ function App() {
                     </div>
                   </div>
                 )}
+                </div>
               </div>
             )}
           </div>
